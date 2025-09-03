@@ -30,64 +30,58 @@
       letter-spacing: 1px;
       position: relative;
     }
-    header img {
-      height: 45px;
-      margin: 0 15px;
-    }
     .header-text {
       font-weight: bold;
       text-transform: uppercase;
       text-align: center;
     }
-.container {
-  display: grid;
-  grid-template-rows: auto minmax(200px, 35%) 1fr; /* Chart flexible, table fills rest */
-  gap: 10px;
-  height: calc(100vh - 70px);
-  padding: 10px 16px 16px;
-}
-
-.chart-section {
-  background: #fff;
-  border: 1px solid #e6e6e6;
-  border-radius: 12px;
-  padding: 10px 14px;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-  height: 100%; /* Let it grow/shrink with grid */
-}
-
-.table-section {
-  background: #fff;
-  border: 1px solid #e6e6e6;
-  border-radius: 12px;
-  overflow: auto;
-  padding: 0;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: auto; /* Fit within container */
-}
-thead th {
-  position: sticky;
-  top: 0;
-  background-color: var(--brand-2); /* dark background */
-  color: #ffffff !important;       /* force white text */
-  padding: 10px;
-  text-align: left;
-  font-weight: 600;
-  font-size: 14px;
-  z-index: 2; /* ensures header stays above body when scrolling */
-}
+    .container {
+      display: grid;
+      grid-template-rows: auto minmax(200px, 35%) 1fr;
+      gap: 10px;
+      height: calc(100vh - 70px);
+      padding: 10px 16px 16px;
+    }
+    .chart-section {
+      background: #fff;
+      border: 1px solid #e6e6e6;
+      border-radius: 12px;
+      padding: 10px 14px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+      height: 100%;
+    }
+    .table-section {
+      background: #fff;
+      border: 1px solid #e6e6e6;
+      border-radius: 12px;
+      overflow: auto;
+      padding: 0;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: auto;
+    }
+    thead th {
+      position: sticky;
+      top: 0;
+      background-color: var(--brand-2);
+      color: #ffffff !important;
+      padding: 10px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 14px;
+      z-index: 2;
+    }
     tbody td {
       padding: 10px;
       border-bottom: 1px solid #eee;
-      vertical-align: top;
+      vertical-align: middle;
       font-size: 14px;
+      text-align: center;
     }
     tbody tr:hover { background: #f9fbfd; }
     a {
@@ -97,28 +91,36 @@ thead th {
     }
     a:hover { text-decoration: underline; }
 
-    /* Legend */
-    .legend {
-      margin: 8px 0;
-      font-size: 14px;
-    }
-    .legend span {
+    /* Status badges */
+    .status-badge {
       display: inline-block;
       padding: 4px 10px;
-      margin-right: 8px;
-      border-radius: 4px;
+      font-size: 13px;
       font-weight: bold;
+      border-radius: 999px;
+      text-align: center;
+      white-space: nowrap;
     }
+    .status-ongoing {
+      background: #27ae60;
+      color: #fff;
+    }
+    .status-completed {
+      background: #2980b9;
+      color: #fff;
+    }
+
+    /* Remaining days background colors */
     .green { background: green; color: #fff; }
-    .lightgreen { background: lightgreen; }
-    .gold { background: gold; }
-    .orange { background: orange; }
+    .lightgreen { background: lightgreen; color: #000; }
+    .gold { background: gold; color: #000; }
+    .orange { background: orange; color: #000; }
     .red { background: red; color: #fff; }
   </style>
 </head>
 <body>
   <header>
-    <div class="header-text">SOEPD Repair and Rehabilitation Status </div>
+    <div class="header-text">SOEPD Repair and Rehabilitation Status</div>
   </header>
 
   <div class="container">
@@ -130,20 +132,18 @@ thead th {
         <option value="MOIST">MOIST</option>
         <option value="MOSES">MOSES</option>
       </select>
+
+      <label for="statusFilter" style="margin-left:15px;">Filter by Status:</label>
+      <select id="statusFilter">
+        <option value="All">All</option>
+        <option value="Ongoing">Ongoing</option>
+        <option value="Completed">Completed</option>
+      </select>
     </div>
 
     <!-- Chart -->
     <div class="chart-section">
       <canvas id="completionChart" aria-label="Project completion chart" role="img"></canvas>
-    </div>
-
-    <!-- Legend -->
-    <div class="legend">
-      <span class="green">75–100% Time Left</span>
-      <span class="lightgreen">50–75%</span>
-      <span class="gold">25–50%</span>
-      <span class="orange">0–25%</span>
-      <span class="red">Overdue</span>
     </div>
 
     <!-- Table -->
@@ -154,7 +154,6 @@ thead th {
             <th>PURCHASE REQUEST #</th>
             <th>PROJECT CATEGORY</th>
             <th>PROJECT TITLE</th>
-            <th>CONTRACTOR</th>
             <th>STATUS</th>
             <th>PROJECT COMPLETION (%)</th>
             <th>PROJECT CONTRACT DURATION</th>
@@ -171,108 +170,124 @@ thead th {
   </div>
 
   <script>
-    // Dummy dataset
-    const projects = [
-      { pr: "2025-001", category: "MOIST", title: "Metro Heights Condominium", contractor: "ABC Builders", status: "Ongoing", completion: 72, start: "2024-03-15", end: "2026-09-30", actualStart: "2024-03-20", actualEnd: "" },
-      { pr: "2025-002", category: "MOSES", title: "Greenfield IT Park Tower", contractor: "XYZ Contractors", status: "Ongoing", completion: 58, start: "2023-11-01", end: "2025-05-15", actualStart: "2023-11-05", actualEnd: "" },
-      { pr: "2025-003", category: "MOSES", title: "Harborview Bridge Expansion", contractor: "BuildRight Corp.", status: "Ongoing", completion: 84, start: "2022-08-10", end: "2025-12-15", actualStart: "2022-08-12", actualEnd: "" },
-      { pr: "2025-004", category: "MOIST", title: "Sunrise Mall", contractor: "PrimeConstruct", status: "Ongoing", completion: 93, start: "2023-04-20", end: "2025-12-31", actualStart: "2023-04-24", actualEnd: "" },
-      { pr: "2025-005", category: "MOSES", title: "Laguna Eco-Industrial Park", contractor: "EcoDev Co.", status: "Completed", completion: 100, start: "2022-05-05", end: "2024-12-15", actualStart: "2022-05-10", actualEnd: "2024-12-12" },
-      { pr: "2025-006", category: "MOIST", title: "Skyway Extension Project", contractor: "HighwayWorks", status: "Ongoing", completion: 61, start: "2023-01-12", end: "2025-11-30", actualStart: "2023-01-15", actualEnd: "" },
-      { pr: "2025-007", category: "MOSES", title: "Riverside Residegnces", contractor: "HomeBuild Inc.", status: "Ongoing", completion: 32, start: "2024-06-01", end: "2027-01-30", actualStart: "2024-06-05", actualEnd: "" },
-      { pr: "2025-008", category: "MOSES", title: "Coastal Flood Protection Wall", contractor: "SafeShore Ltd.", status: "Ongoing", completion: 67, start: "2022-09-18", end: "2025-06-15", actualStart: "2022-09-20", actualEnd: "" },
-      { pr: "2025-009", category: "MOIST", title: "Central Business Hotel", contractor: "CityHotels Dev", status: "Ongoing", completion: 76, start: "2023-07-25", end: "2026-03-10", actualStart: "2023-07-28", actualEnd: "" },
-      { pr: "2025-010", category: "MOSES", title: "Mindanao Agro Processing Hub", contractor: "AgroTech Builders", status: "Ongoing", completion: 45, start: "2024-01-10", end: "2026-08-20", actualStart: "2024-01-12", actualEnd: "" }
-    ];
+const projects = [
+  { pr: "2025-001", category: "MOIST", title: "Repair and Rehabilitation of Earthquake Monitoring Station - Bislig City Seismic Station", status: "Ongoing", completion: 72, start: "2024-03-15", end: "2026-09-30", actualStart: "2024-03-20", actualEnd: "" },
+  { pr: "2025-002", category: "MOSES", title: "Repair and Rehabilitation of Earthquake Monitoring Station - General Santos City Seismic Station", status: "Ongoing", completion: 58, start: "2023-11-01", end: "2025-05-15", actualStart: "2023-11-05", actualEnd: "" },
+  { pr: "2025-003", category: "MOSES", title: "Repair and Rehabilitation of Earthquake Monitoring Station - Palo Seismic Station", status: "Ongoing", completion: 84, start: "2022-08-10", end: "2025-12-15", actualStart: "2022-08-12", actualEnd: "" },
+  { pr: "2025-004", category: "MOIST", title: "Repair and Rehabilitation of Earthquake Monitoring Station - Puerto Princesa Seismic Station", status: "Ongoing", completion: 93, start: "2023-04-20", end: "2025-12-31", actualStart: "2023-04-24", actualEnd: "" },
+  { pr: "2025-005", category: "MOSES", title: "Repair and Rehabilitation of Earthquake Monitoring Station - GLSP", status: "Completed", completion: 100, start: "2022-05-05", end: "2024-12-15", actualStart: "2022-05-10", actualEnd: "2024-12-12" },
+  { pr: "2025-006", category: "MOIST", title: "Repair and Rehabilitation of Earthquake Monitoring Station - OTRP", status: "Ongoing", completion: 61, start: "2023-01-12", end: "2025-11-30", actualStart: "2023-01-15", actualEnd: "" },
+  { pr: "2025-007", category: "MOSES", title: "Repair and Rehabilitation of Earthquake Monitoring Station - SCZP", status: "Ongoing", completion: 32, start: "2024-06-01", end: "2027-01-30", actualStart: "2024-06-05", actualEnd: "" },
+  { pr: "2025-008", category: "MOSES", title: "Repair and Rehabilitation of Earthquake Monitoring Station - PALP", status: "Ongoing", completion: 67, start: "2022-09-18", end: "2025-06-15", actualStart: "2022-09-20", actualEnd: "" },
+  { pr: "2025-009", category: "MOIST", title: "Repair and Rehabilitation of Earthquake Monitoring Station - Baguio City Seismic Station", status: "Ongoing", completion: 76, start: "2023-07-25", end: "2026-03-10", actualStart: "2023-07-28", actualEnd: "" },
+  { pr: "2025-010", category: "MOSES", title: "Repair and Rehabilitation of Earthquake Monitoring Station - Surigao City Seismic Station", status: "Ongoing", completion: 45, start: "2024-01-10", end: "2026-08-20", actualStart: "2024-01-12", actualEnd: "" },
+  { pr: "2025-011", category: "MOSES", title: "Repair and Rehabilitation of Earthquake Monitoring Station - Zamboanga City Seismic Station", status: "Ongoing", completion: 45, start: "2024-01-10", end: "2026-08-20", actualStart: "2024-01-12", actualEnd: "" }
+];
 
-    // Helpers
-    const toDate = s => s ? new Date(s + "T00:00:00") : null;
-    const fmt = s => s || "-";
-    const daysBetween = (a, b) => Math.round((b - a) / 86400000);
-    const projectDurationDays = p => toDate(p.start) && toDate(p.end) ? `${daysBetween(toDate(p.start), toDate(p.end))} days` : "-";
-    const remainingDays = p => {
-      if (p.status.toLowerCase() === "completed" || p.actualEnd) return 0;
-      const today = new Date();
-      const e = toDate(p.end);
-      if (!e) return "-";
-      return Math.ceil((e - today) / 86400000);
-    };
+// Helpers
+const toDate = s => s ? new Date(s + "T00:00:00") : null;
+const fmt = s => s || "-";
+const daysBetween = (a, b) => Math.round((b - a) / 86400000);
+const projectDurationDays = p => toDate(p.start) && toDate(p.end) ? `${daysBetween(toDate(p.start), toDate(p.end))} days` : "-";
+const remainingDays = p => {
+  if (p.status.toLowerCase() === "completed" || p.actualEnd) return 0;
+  const today = new Date();
+  const e = toDate(p.end);
+  if (!e) return "-";
+  return Math.ceil((e - today) / 86400000);
+};
 
-    // Function to color Remaining Days
-    function colorizeRemainingDays(p) {
-      const rem = remainingDays(p);
-      const s = toDate(p.start), e = toDate(p.end);
-      if (rem === "-" || !s || !e) return `<td>${rem}</td>`;
+// Remaining days as colored cells with tooltip
+function colorizeRemainingDays(p) {
+  const rem = remainingDays(p);
+  const s = toDate(p.start), e = toDate(p.end);
+  if (rem === "-" || !s || !e) return `<td>${rem}</td>`;
 
-      const duration = daysBetween(s, e);
+  const duration = daysBetween(s, e);
+  if (duration <= 0) return `<td>-</td>`;
+  if (rem < 0) return `<td class="red"><span title="Overdue by ${Math.abs(rem)} days">Overdue</span></td>`;
 
-      if (rem < 0) return `<td class="red">${rem}</td>`;
+  const percent = Math.round((rem / duration) * 100);
 
-      const q1 = duration * 0.25;
-      const q2 = duration * 0.50;
-      const q3 = duration * 0.75;
+  const q1 = duration * 0.25;
+  const q2 = duration * 0.50;
+  const q3 = duration * 0.75;
 
-      let cls = "green";
-      if (rem <= q1) cls = "orange";
-      else if (rem <= q2) cls = "gold";
-      else if (rem <= q3) cls = "lightgreen";
+  let cls = "green";
+  if (rem <= q1) cls = "orange";
+  else if (rem <= q2) cls = "gold";
+  else if (rem <= q3) cls = "lightgreen";
 
-      return `<td class="${cls}" style="font-weight:bold; text-align:center;">${rem}</td>`;
-    }
+  return `<td class="${cls}"><strong title="${percent}% of time left (${rem} days)">${rem}</strong></td>`;
+}
 
-    const tbody = document.getElementById("projects-body");
-    const ctx = document.getElementById("completionChart").getContext("2d");
+const tbody = document.getElementById("projects-body");
+const ctx = document.getElementById("completionChart").getContext("2d");
 
-    // Chart instance
-    const chart = new Chart(ctx, {
-      type: "bar",
-      data: { labels: [], datasets: [{ label: "Project Completion (%)", data: [], backgroundColor: "#4aa3df" }] },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          y: { beginAtZero: true, max: 100, title: { display: true, text: "Completion (%)" } },
-          x: { title: { display: true, text: "Project Name" }, ticks: { maxRotation: 30, minRotation: 0, autoSkip: true } }
+// Chart instance
+const chart = new Chart(ctx, {
+  type: "bar",
+  data: { labels: [], datasets: [{ label: "Project Completion (%)", data: [], backgroundColor: "#4aa3df" }] },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false }, tooltip: { mode: "index", intersect: false } },
+    scales: {
+      y: { beginAtZero: true, max: 100, title: { display: true, text: "Completion (%)" } },
+      x: { title: { display: true, text: "Projects" },
+        ticks: { maxRotation: 45, minRotation: 30, autoSkip: false,
+          callback: function(value) {
+            let label = this.getLabelForValue(value);
+            return label.length > 15 ? label.substring(0, 15) + "…" : label;
+          }
         }
       }
-    });
-
-    // Render function
-    function render(category) {
-      tbody.innerHTML = "";
-      const filtered = category === "All" ? projects : projects.filter(p => p.category === category);
-
-      filtered.forEach(p => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td>${p.pr}</td>
-          <td>${p.category}</td>
-          <td><a href="project-${p.pr}.html">${p.title}</a></td>
-          <td>${p.contractor}</td>
-          <td>${p.status}</td>
-          <td>${p.completion}%</td>
-          <td>${projectDurationDays(p)}</td>
-          <td>${fmt(p.start)}</td>
-          <td>${fmt(p.end)}</td>
-          <td>${fmt(p.actualStart)}</td>
-          <td>${fmt(p.actualEnd)}</td>
-          ${colorizeRemainingDays(p)}
-        `;
-        tbody.appendChild(tr);
-      });
-
-      // Update chart
-      chart.data.labels = filtered.map(p => p.title);
-      chart.data.datasets[0].data = filtered.map(p => p.completion);
-      chart.update();
     }
+  }
+});
 
-    // Event listener
-    document.getElementById("categoryFilter").addEventListener("change", e => render(e.target.value));
+// Render function
+function render(category, status) {
+  tbody.innerHTML = "";
+  let filtered = category === "All" ? projects : projects.filter(p => p.category === category);
+  filtered = status === "All" ? filtered : filtered.filter(p => p.status === status);
 
-    // Initial render
-    render("All");
+  filtered.forEach(p => {
+    const tr = document.createElement("tr");
+    const statusClass = p.status.toLowerCase() === "completed" ? "status-completed" : "status-ongoing";
+
+    tr.innerHTML = `
+      <td>${p.pr}</td>
+      <td>${p.category}</td>
+      <td><a href="project-${p.pr}.html">${p.title}</a></td>
+      <td><span class="status-badge ${statusClass}">${p.status}</span></td>
+      <td>${p.completion}%</td>
+      <td>${projectDurationDays(p)}</td>
+      <td>${fmt(p.start)}</td>
+      <td>${fmt(p.end)}</td>
+      <td>${fmt(p.actualStart)}</td>
+      <td>${fmt(p.actualEnd)}</td>
+      ${colorizeRemainingDays(p)}
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Update chart
+  chart.data.labels = filtered.map(p => p.title);
+  chart.data.datasets[0].data = filtered.map(p => p.completion);
+  chart.update();
+}
+
+// Event listeners
+document.getElementById("categoryFilter").addEventListener("change", () => {
+  render(categoryFilter.value, statusFilter.value);
+});
+document.getElementById("statusFilter").addEventListener("change", () => {
+  render(categoryFilter.value, statusFilter.value);
+});
+
+// Initial render
+render("All", "All");
   </script>
 </body>
 </html>
