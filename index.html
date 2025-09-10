@@ -222,10 +222,10 @@
 
     <div id="addProjectFormContainer" aria-hidden="true">
       <form id="addProjectForm">
-        <input type="text" id="pr" placeholder="PURCHASE REQUEST #" required />
-        <input type="text" id="category" placeholder="Category (MOIST / MOSES)" required />
-        <input type="text" id="title" placeholder="Project Title" required />
-        <input type="text" id="cost" placeholder="Project Cost (₱)" required />
+        <input type="text" id="pr" placeholder="PURCHASE REQUEST #" />
+        <input type="text" id="category" placeholder="Category (MOIST / MOSES)" />
+        <input type="text" id="title" placeholder="Project Title" />
+        <input type="text" id="cost" placeholder="Project Cost (₱)" />
         <select id="status">
           <option value="Ongoing">Ongoing</option>
           <option value="Completed">Completed</option>
@@ -273,15 +273,11 @@
   </div>
 
   <script>
-    const projects = [
+    // Load from localStorage or use defaults
+    const savedProjects = JSON.parse(localStorage.getItem("projects")) || [];
+    let projects = savedProjects.length ? savedProjects : [
       { pr: "520230904765", category: "MOSES", title: "Repair & Rehabilitation - Bislig City Seismic Station", cost: "1808000", status: "Ongoing", completion: 72, start: "2025-07-28", end: "2025-11-25", actualStart: "2025-09-08", actualEnd: "" },
-      { pr: "-", category: "MOSES", title: "Repair & Rehabilitation - General Santos City Seismic Station", cost: "1800000", status: "Procurement", completion: 0, start: "", end: "", actualStart: "", actualEnd: "" },
-      { pr: "520240904993-0-2", category: "MOSES", title: "Repair & Rehabilitation - Baguio City Seismic Station", cost: "3500000", status: "Procurement", completion: 0, start: "", end: "", actualStart: "", actualEnd: "" },
-      { pr: "520240905003-0-1", category: "MOSES", title: "Repair & Rehabilitation - Surigao City Seismic Station", cost: "1500000", status: "Procurement", completion: 0, start: "", end: "", actualStart: "", actualEnd: "" },
-      { pr: "520240905011", category: "MOSES", title: "Repair & Rehabilitation - Zamboanga City Seismic Station", cost: "750000", status: "Procurement", completion: 0, start: "", end: "", actualStart: "", actualEnd: "" },
-      { pr: "520230804619", category: "MOIST", title: "Rehabilitation of Dapa Surigao del Norte SLMS", cost: "3848858", status: "Completed", completion: 100, start: "2022-05-05", end: "2024-12-15", actualStart: "2022-05-10", actualEnd: "2024-12-12" },
-      { pr: "520240905167-0-1", category: "MOIST", title: "Establishment of SLMS - Moro Gulf", cost: "4800000", status: "Procurement", completion: 0, start: "", end: "", actualStart: "", actualEnd: "" },
-      { pr: "520240905033-0-1", category: "MOIST", title: "Rehabilitation of SLMS - Guiuan, Eastern Samar", cost: "5000000", status: "Procurement", completion: 0, start: "", end: "", actualStart: "", actualEnd: "" }
+      { pr: "-", category: "MOSES", title: "Repair & Rehabilitation - General Santos City Seismic Station", cost: "1800000", status: "Procurement", completion: 0, start: "", end: "", actualStart: "", actualEnd: "" }
     ];
 
     const toDate = s => s ? new Date(s + "T00:00:00") : null;
@@ -359,9 +355,10 @@
 
     function render(category="All", status="All", year="All"){
       tbody.innerHTML = "";
-      let filtered = category === "All" ? projects : projects.filter(p => p.category === category);
-      filtered = status === "All" ? filtered : filtered.filter(p => p.status === status);
+      let filtered = projects;
 
+      if(category !== "All") filtered = filtered.filter(p => p.category === category);
+      if(status !== "All") filtered = filtered.filter(p => p.status === status);
       if(year !== "All"){
         filtered = filtered.filter(p => {
           if(!p.pr || p.pr.length < 5) return false;
@@ -425,6 +422,10 @@
         actualEnd: document.getElementById("actualEnd").value || ""
       };
       projects.push(newProject);
+
+      // Save to localStorage
+      localStorage.setItem("projects", JSON.stringify(projects));
+
       render(categoryFilter.value, statusFilter.value, yearFilter.value);
       addProjectForm.reset();
       addProjectFormContainer.classList.remove("open");
@@ -447,59 +448,7 @@
     statusFilter.addEventListener("change", () => render(categoryFilter.value, statusFilter.value, yearFilter.value));
     yearFilter.addEventListener("change", () => render(categoryFilter.value, statusFilter.value, yearFilter.value));
 
-    document.addEventListener("click", (ev) => {
-      const a = ev.target.closest && ev.target.closest(".project-link");
-      if (!a) return;
-      ev.preventDefault();
-      const pr = a.dataset.pr;
-      const project = projects.find(p => p.pr === pr);
-      if (!project) return;
-      generateProjectPage(project);
-    });
-
-    function generateProjectPage(project){
-      const w = window.open("", "_blank");
-      if (!w) return;
-      const html = `
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>${project.title}</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <style>
-    body{ font-family:Segoe UI,Arial,Helvetica,sans-serif; padding:20px; background:#f6f8fa; color:#222 }
-    .card{ background:#fff; padding:16px; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,0.06) }
-    h1{ color:#2c3e50; margin:0 0 12px 0 }
-    table{ width:100%; border-collapse:collapse; margin-top:12px }
-    th, td{ text-align:left; padding:8px; border-bottom:1px solid #eee }
-    th{ width:220px; color:#666; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <h1>${project.title}</h1>
-    <table>
-      <tr><th>PR #</th><td>${project.pr}</td></tr>
-      <tr><th>Category</th><td>${project.category}</td></tr>
-      <tr><th>Cost</th><td>₱${Number(project.cost || 0).toLocaleString()}</td></tr>
-      <tr><th>Status</th><td>${project.status}</td></tr>
-      <tr><th>Completion</th><td>${project.completion}%</td></tr>
-      <tr><th>Start Date</th><td>${fmt(project.start)}</td></tr>
-      <tr><th>End Date</th><td>${fmt(project.end)}</td></tr>
-      <tr><th>Actual Start</th><td>${fmt(project.actualStart)}</td></tr>
-      <tr><th>Actual End</th><td>${fmt(project.actualEnd)}</td></tr>
-      <tr><th>Remaining Days</th><td>${remainingDays(project)}</td></tr>
-    </table>
-  </div>
-</body>
-</html>
-`;
-      w.document.write(html);
-      w.document.close();
-    }
-
-    render("All","All","All");
+    render();
   </script>
 </body>
 </html>
